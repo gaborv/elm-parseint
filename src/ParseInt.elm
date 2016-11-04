@@ -5,7 +5,7 @@ module ParseInt
         , parseIntHex
         , parseIntRadix
         , toRadix
-        , toRadix'
+        , toRadix_
         , toHex
         , toOct
         , intFromChar
@@ -16,7 +16,7 @@ module ParseInt
 {-| Convert String value to Int, or Int to String, with given radix.
 
 # Functions
-@docs parseInt, parseIntOct, parseIntHex, parseIntRadix, toRadix, toRadix', toOct, toHex, intFromChar, charFromInt
+@docs parseInt, parseIntOct, parseIntHex, parseIntRadix, toRadix, toRadix_, toOct, toHex, intFromChar, charFromInt
 
 # Errors
 @docs Error
@@ -89,10 +89,11 @@ parseIntR radix rstring =
 
         Just ( c, rest ) ->
             intFromChar radix c
-                `andThen` (\ci ->
-                            parseIntR radix rest
-                                `andThen` (\ri -> Ok (ci + ri * radix))
-                          )
+                |> andThen
+                    (\ci ->
+                        parseIntR radix rest
+                            |> andThen (\ri -> Ok (ci + ri * radix))
+                    )
 
 
 {-| Offset of character from basis character in the ASCII table.
@@ -139,7 +140,7 @@ intFromChar radix c =
             else
                 Err (OutOfRange c)
     in
-        toInt `andThen` validInt
+        toInt |> andThen validInt
 
 
 {-| Convert Int to corresponding Char representing it as a digit. Values from
@@ -168,9 +169,9 @@ toRadix : Int -> Int -> Result Error String
 toRadix radix i =
     if 2 <= radix && radix <= 36 then
         if i < 0 then
-            Ok <| "-" ++ toRadix' radix (-i)
+            Ok <| "-" ++ toRadix_ radix (-i)
         else
-            Ok <| toRadix' radix i
+            Ok <| toRadix_ radix i
     else
         Err <| InvalidRadix radix
 
@@ -181,23 +182,23 @@ toRadix radix i =
     toRadix' 16 3735928559 == "DEADBEEF"
     toRadix' 37 36 --> crash
 -}
-toRadix' : Int -> Int -> String
-toRadix' radix i =
+toRadix_ : Int -> Int -> String
+toRadix_ radix i =
     if i < radix then
         String.fromChar <| charFromInt i
     else
-        toRadix' radix (i // radix) ++ (String.fromChar <| charFromInt (i % radix))
+        toRadix_ radix (i // radix) ++ (String.fromChar <| charFromInt (i % radix))
 
 
 {-| Convert Int to octal String.
 -}
 toOct : Int -> String
 toOct =
-    toRadix' 8
+    toRadix_ 8
 
 
 {-| Convert Int to hexadecimal String.
 -}
 toHex : Int -> String
 toHex =
-    toRadix' 16
+    toRadix_ 16
